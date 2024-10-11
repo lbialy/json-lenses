@@ -1,3 +1,5 @@
+/*
+
 import sbt._
 
 import com.typesafe.sbt.SbtScalariform
@@ -18,3 +20,5 @@ object ScalariformSupport {
       .setPreference(AlignSingleLineCaseStatements, true)
       .setPreference(DoubleIndentConstructorArguments, true)
 }
+
+*/

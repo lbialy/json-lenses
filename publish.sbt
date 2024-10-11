@@ -17,14 +17,14 @@ pomExtra :=
                            "scm:git:git@github.com:jrudolph/json-lenses.git",
                            "jrudolph", "Johannes Rudolph")
 
-useGpg := true
+// useGpg := true
 
 site.settings
 
 site.includeScaladoc()
 
-ghpages.settings
+//ghpages.settings
 
 git.remoteRepo := "git@github.com:jrudolph/json-lenses.git"
 
-ScalariformSupport.formatSettings
+//ScalariformSupport.formatSettings
