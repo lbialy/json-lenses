@@ -12,9 +12,9 @@ initialCommands in console += """
     import JsonLenses._
 """
 
-scalaVersion := "2.13.0"
+scalaVersion := "2.13.15"
 
-crossScalaVersions := Seq("2.13.0", "2.12.8", "2.11.12")
+crossScalaVersions := Seq("2.13.15", "2.12.8", "2.11.12")
 
 scalacOptions ++= Seq(
   "-feature",
