@@ -2,6 +2,7 @@ libraryDependencies ++=
   Seq(
     "io.spray" %% "spray-json" % "1.3.5",
     "org.parboiled" %% "parboiled-scala" % "1.3.1" % "compile",
+    "com.lihaoyi" %% "fastparse" % "3.1.1",
     "org.specs2" %% "specs2-core" % "4.6.0" % "test"
   )
 

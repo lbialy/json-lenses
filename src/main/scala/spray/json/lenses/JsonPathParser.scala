@@ -21,12 +21,10 @@ import java.lang.StringBuilder
 
 import org.parboiled.Context
 import org.parboiled.scala._
-import org.parboiled.errors.{ ErrorUtils, ParsingException }
+import org.parboiled.errors.{ErrorUtils, ParsingException}
 
-/**
- * A parser for json-path expression as specified here:
- * [[http://goessner.net/articles/JsonPath/]]
- */
+/** A parser for json-path expression as specified here: [[http://goessner.net/articles/JsonPath/]]
+  */
 object JsonPathParser extends Parser with BasicRules {
   def JsonPathExpr = rule { Path ~ EOI }
 
@@ -93,14 +91,12 @@ object JsonPathParser extends Parser with BasicRules {
   def SingleQuotedString: Rule1[String] =
     rule { "'" ~ push(new java.lang.StringBuilder) ~ zeroOrMore(!anyOf("'") ~ ("\\" ~ EscapedChar | NormalChar)) } ~ "'" ~~> (_.toString)
 
-  /**
-   * The main parsing method. Uses a ReportingParseRunner (which only reports the first error) for simplicity.
-   */
+  /** The main parsing method. Uses a ReportingParseRunner (which only reports the first error) for simplicity.
+    */
   def apply(path: String): JsonPath.Path = apply(path.toCharArray)
 
-  /**
-   * The main parsing method. Uses a ReportingParseRunner (which only reports the first error) for simplicity.
-   */
+  /** The main parsing method. Uses a ReportingParseRunner (which only reports the first error) for simplicity.
+    */
   def apply(path: Array[Char]): JsonPath.Path = {
     val parsingResult = ReportingParseRunner(JsonPathExpr).run(path)
     parsingResult.result.getOrElse {
@@ -119,7 +115,8 @@ trait BasicRules { _: Parser =>
       | "n" ~ appendToSb('\n')
       | "r" ~ appendToSb('\r')
       | "t" ~ appendToSb('\t')
-      | Unicode ~~% withContext((code, ctx) => appendToSb(code.asInstanceOf[Char])(ctx)))
+      | Unicode ~~% withContext((code, ctx) => appendToSb(code.asInstanceOf[Char])(ctx))
+  )
 
   def NormalChar = rule { !anyOf("\"\\") ~ ANY ~:% (withContext(appendToSb(_)(_))) }
   def Unicode = rule { "u" ~ group(HexDigit ~ HexDigit ~ HexDigit ~ HexDigit) ~> (java.lang.Integer.parseInt(_, 16)) }
@@ -138,4 +135,115 @@ trait BasicRules { _: Parser =>
     ctx.getValueStack.peek.asInstanceOf[StringBuilder].append(c)
     ()
   }
+}
+
+import fastparse._
+import NoWhitespace._
+
+/** A parser for json-path expression as specified here: [[http://goessner.net/articles/JsonPath/]]
+  */
+object JsonPathParserFastParse {
+
+  def apply(path: String): JsonPath.Path = {
+    fastparse.parse(path, JsonPathExpr(_)) match {
+      case Parsed.Success(value, _) => value
+      case f: Parsed.Failure        => throw new ParsingException("Invalid JSON path:\n" + f.trace().longMsg)
+    }
+  }
+
+  def JsonPathExpr[$: P]: P[JsonPath.Path] = P(Path ~ End)
+
+  def Path[$: P]: P[JsonPath.Path] = P(Root.flatMap(root => OptionalSelections(root)))
+
+  def OptionalSelections[$: P](path: JsonPath.Path): P[JsonPath.Path] = P(
+    (Projection).rep.map { projections =>
+      projections.foldLeft(path)((p, proj) => JsonPath.Selection(p, proj))
+    }
+  )
+
+  def Root[$: P]: P[JsonPath.Root.type] = P(CharIn("$@").map(_ => JsonPath.Root))
+
+  def Projection[$: P]: P[JsonPath.Projection] = P(
+    "." ~ DotProjection |
+      "[" ~ BracketProjection ~ "]"
+  )
+
+  def DotProjection[$: P]: P[JsonPath.Projection] = P(ByFieldName)
+
+  def ByFieldName[$: P]: P[JsonPath.Projection] = P(FieldName.map(JsonPath.ByField))
+
+  def AllElements[$: P]: P[JsonPath.Projection] = P("*").map(_ => JsonPath.AllElements)
+
+  def BracketProjection[$: P]: P[JsonPath.Projection] = P(
+    Digits.!.map(d => JsonPath.ByIndex(d.toInt)) |
+      SingleQuotedString.map(JsonPath.ByField) |
+      AllElements |
+      ("?(" ~ WhiteSpace ~ Predicate ~ WhiteSpace ~ ")").map(JsonPath.ByPredicate)
+  )
+
+  def Predicate[$: P]: P[JsonPath.Predicate] = P(Lt | Gt | Eq | Exists)
+
+  def op[$: P, T](opStr: String)(cons: (JsonPath.Expr, JsonPath.SimpleExpr) => T): P[T] = P(
+    Expr ~ WhiteSpace ~ opStr ~ WhiteSpace ~ SimpleExpr
+  ).map { case (expr, simpleExpr) => cons(expr, simpleExpr) }
+
+  def Eq[$: P]: P[JsonPath.Eq] = op("==")(JsonPath.Eq)
+
+  def Lt[$: P]: P[JsonPath.Lt] = op("<")(JsonPath.Lt)
+
+  def Gt[$: P]: P[JsonPath.Gt] = op(">")(JsonPath.Gt)
+
+  def Exists[$: P]: P[JsonPath.Exists] = P(Path.map(JsonPath.Exists))
+
+  def Expr[$: P]: P[JsonPath.Expr] = P(
+    Path.map(JsonPath.PathExpr) |
+      SimpleExpr
+  )
+
+  def SimpleExpr[$: P]: P[JsonPath.SimpleExpr] = P(JsConstant.map(JsonPath.Constant))
+
+  def JsConstant[$: P]: P[JsValue] = P(
+    JsonNumber |
+      SingleQuotedString.map(JsString.apply)
+  )
+
+  def FieldName[$: P]: P[String] = P(CharsWhileIn("a-zA-Z0-9_\\-").!)
+
+  def SingleQuotedString[$: P]: P[String] = P(
+    "'" ~ (("\\" ~ EscapedChar) | NormalChar).repX.! ~ "'"
+  )
+
+  def EscapedChar[$: P]: P[Char] = P(
+    "\\" ~ (CharIn("\"\\/").!.map(_.charAt(0))
+      | "b".!.map(_ => '\b')
+      | "f".!.map(_ => '\f')
+      | "n".!.map(_ => '\n')
+      | "r".!.map(_ => '\r')
+      | "t".!.map(_ => '\t')
+      | Unicode)
+  )
+
+  def Unicode[$: P]: P[Char] = P("u" ~ HexDigit.rep(exactly = 4).!).map { digits =>
+    java.lang.Integer.parseInt(digits, 16).toChar
+  }
+
+  def HexDigit[$: P]: P[Unit] = P(CharIn("0-9a-fA-F"))
+
+  def NormalChar[$: P]: P[String] = P(CharPred(c => c != '\\' && c != '\'')).!
+
+  def JsonNumber[$: P]: P[JsValue] = P(
+    (Integer ~ Frac.? ~ Exp.?).!.map(s => JsNumber(s))
+  )
+
+  def Integer[$: P]: P[Unit] = P("-".? ~ (CharIn("1-9") ~ Digits | Digit))
+
+  def Digit[$: P]: P[Unit] = P(CharIn("0-9"))
+
+  def Digits[$: P]: P[Unit] = P(Digit.rep(1))
+
+  def Frac[$: P]: P[Unit] = P("." ~ Digits)
+
+  def Exp[$: P]: P[Unit] = P(CharIn("eE") ~ CharIn("+\\-").? ~ Digits)
+
+  def WhiteSpace[$: P]: P[Unit] = P(CharsWhileIn(" \n\r\t\f", 0))
 }

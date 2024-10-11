@@ -29,12 +29,12 @@ trait SpecHelpers {
   def be_json(json: String) =
     be_==(JsonParser(json))
 
-  import org.specs2.matcher.{ BeMatching, Matcher }
+  import org.specs2.matcher.Matcher
 
   override def throwA[E <: Throwable](message: String = ".*")(implicit m: ClassTag[E]): Matcher[Any] = {
     import java.util.regex.Pattern
-    throwA(m).like {
-      case e => createExpectable(e.getMessage).applyMatcher(new BeMatching(".*" + Pattern.quote(message) + ".*"))
+    throwA(m).like { case e =>
+      createExpectable(e.getMessage).applyMatcher(beMatching(".*" + Pattern.quote(message) + ".*"))
     }
   }
 }

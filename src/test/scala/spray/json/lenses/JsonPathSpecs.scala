@@ -42,11 +42,15 @@ class JsonPathSpecs extends Specification {
       }
 
       "by predicate: eq" in {
-        parse("$[?(@.id == 'test')]") must be_==(Selection(Root, ByPredicate(Eq(PathExpr(Selection(Root, ByField("id"))), Constant(JsString("test"))))))
+        parse("$[?(@.id == 'test')]") must be_==(
+          Selection(Root, ByPredicate(Eq(PathExpr(Selection(Root, ByField("id"))), Constant(JsString("test")))))
+        )
       }
 
       "by predicate: lt" in {
-        parse("$[?(@.id < 12)]") must be_==(Selection(Root, ByPredicate(Lt(PathExpr(Selection(Root, ByField("id"))), Constant(JsNumber(12))))))
+        parse("$[?(@.id < 12)]") must be_==(
+          Selection(Root, ByPredicate(Lt(PathExpr(Selection(Root, ByField("id"))), Constant(JsNumber(12)))))
+        )
       }
 
       "by predicate: exists" in {
@@ -55,10 +59,11 @@ class JsonPathSpecs extends Specification {
 
       "by predicate: strings with spaces in conditions" in {
         parse("$[?(@.title=='The Space Merchants')]") must be_==(
-          Selection(Root, ByPredicate(Eq(PathExpr(Selection(Root, ByField("title"))), Constant(JsString("The Space Merchants"))))))
+          Selection(Root, ByPredicate(Eq(PathExpr(Selection(Root, ByField("title"))), Constant(JsString("The Space Merchants")))))
+        )
       }
     }
   }
 
-  def parse(str: String) = JsonPathParser(str)
+  def parse(str: String) = JsonPathParserFastParse(str)
 }
