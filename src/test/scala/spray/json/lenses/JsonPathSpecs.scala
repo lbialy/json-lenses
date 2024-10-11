@@ -65,5 +65,5 @@ class JsonPathSpecs extends Specification {
     }
   }
 
-  def parse(str: String) = JsonPathParserFastParse(str)
+  def parse(str: String) = JsonPathParser(str)
 }

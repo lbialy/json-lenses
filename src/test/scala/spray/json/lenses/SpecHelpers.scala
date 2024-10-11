@@ -31,9 +31,9 @@ trait SpecHelpers {
 
   import org.specs2.matcher.Matcher
 
-  override def throwA[E <: Throwable](message: String = ".*")(implicit m: ClassTag[E]): Matcher[Any] = {
+  override def throwA[E <: Throwable](message: String = ".*")(using m: ClassTag[E]): ExceptionMatcher[E] = {
     import java.util.regex.Pattern
-    throwA(m).like { case e =>
+    self.throwA(using m).like { case e =>
       createExpectable(e.getMessage).applyMatcher(beMatching(".*" + Pattern.quote(message) + ".*"))
     }
   }

@@ -17,9 +17,9 @@
 package spray.json
 package lenses
 
-import Predef.{ augmentString => _, wrapString => _, _ }
+import Predef.{augmentString => _, wrapString => _, _}
 import DefaultJsonProtocol._
-import spray.json.{ JsValue, JsonParser }
+import spray.json.{JsValue, JsonParser}
 
 object JsonLensesTest extends App {
 
@@ -28,11 +28,11 @@ object JsonLensesTest extends App {
   "n" ! set(3)
   "els" ! append {
     "name" ! set("Peter") &&
-      "money" ! set(2)
+    "money" ! set(2)
   }
   "els" / element(1) ! update {
     "money" ! set(38) &&
-      "name" ! set("Testperson")
+    "name" ! set("Testperson")
   } && "n" ! modify[Int](_ + 1)
 
   val json = JsonParser("test")
@@ -48,14 +48,14 @@ object JsonLensesTest extends App {
   ("els" / filter("money".is[Int](_ < 30)) / "name").get[String] _: (JsValue => Seq[String])
   "els" / filter("money".is[Int](_ < 30)) / "name" ! modify[String]("Richman " + _)
 
-  //: JsValue => JsValue
+  // : JsValue => JsValue
 
-  def updateMoney(x: Int) =
+  def updateMoney(x: Int): Update =
     "money" ! modify[Int](_ + x)
 
   "els" / * ! update(updateMoney(12))
-  "els" / * ! extract("name") {
-    name: String =>
-      updateMoney(name.length)
-  }
+  // "els" / * ! extract("name") {
+  //   name: String =>
+  //     updateMoney(name.length)
+  // }
 }

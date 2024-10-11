@@ -22,6 +22,9 @@ import DefaultJsonProtocol._
 import org.specs2.mutable.Specification
 import spray.json.DeserializationException
 
+// symbol literals will have to go:
+import language.deprecated.symbolLiterals
+
 class JsonLensesSpec extends Specification with SpecHelpers {
 
   import JsonLenses._
@@ -38,7 +41,9 @@ class JsonLensesSpec extends Specification with SpecHelpers {
           """{"n": 2}""".extract[Int]('z) must throwAn[Exception]("""Expected field 'z' in '{"n":2}'""")
         }
         "wrong type" in {
-          """{"n": 2}""".extract[String]('n) must throwA[RuntimeException]("spray.json.DeserializationException: Expected String as JsString, but got 2")
+          """{"n": 2}""".extract[String]('n) must throwA[RuntimeException](
+            "spray.json.DeserializationException: Expected String as JsString, but got 2"
+          )
         }
       }
       "optional field" in {
@@ -52,7 +57,9 @@ class JsonLensesSpec extends Specification with SpecHelpers {
           """["a", "b", 2, 5, 8, 3]""".extract[Int](element(3)) must be_==(5)
         }
         "out of bounds" in {
-          """["a", "b", 2, 5, 8, 3]""".extract[Int](element(38)) must throwAn[RuntimeException]("java.lang.IndexOutOfBoundsException: Too little elements in array: [\"a\",\"b\",2,5,8,3] size: 6 index: 38")
+          """["a", "b", 2, 5, 8, 3]""".extract[Int](element(38)) must throwAn[RuntimeException](
+            "java.lang.IndexOutOfBoundsException: Too little elements in array: [\"a\",\"b\",2,5,8,3] size: 6 index: 38"
+          )
         }
       }
       "finding an element" in {
@@ -114,7 +121,9 @@ class JsonLensesSpec extends Specification with SpecHelpers {
           """[{"a": 1}, 12]""".extract[Int](* / 'a) must throwAn[Exception]("""Not a json object: 12""")
         }
         "nested if inner lens fails" in {
-          """[{"a": [{"c": 2}, {"b": 3}]}]""".extract[Int](* / 'a / * / 'b) must throwAn[RuntimeException]("""Expected field 'b' in '{"c":2}'""")
+          """[{"a": [{"c": 2}, {"b": 3}]}]""".extract[Int](* / 'a / * / 'b) must throwAn[RuntimeException](
+            """Expected field 'b' in '{"c":2}'"""
+          )
         }
         "if outer is no array" in {
           """{"a": 5}""".extract[Int]((* / "a")) must throwAn[Exception]("""Not a json array: {"a":5}""")
@@ -129,7 +138,7 @@ class JsonLensesSpec extends Specification with SpecHelpers {
           val array = JsArray(Vector.fill(10000)(entry))
 
           val lens = * / 'doc_count
-          array.extract[Long](lens) must be_==(Vector.fill(10000)(1))
+          assert(array.extract[Long](lens) == Vector.fill(10000)(1))
         }
       }
 
@@ -139,7 +148,9 @@ class JsonLensesSpec extends Specification with SpecHelpers {
     }
 
     "modify" in {
+      import JsonLenses._
       "set field" in {
+
         "existing" in {
           """{"n": 12}""" update (n ! set(23)) must be_json("""{"n": 23}""")
         }
@@ -156,7 +167,9 @@ class JsonLensesSpec extends Specification with SpecHelpers {
           """{"n": 12}""" update (n ! modify[Int](_ + 1)) must be_json("""{"n": 13}""")
         }
         "wrong type" in {
-          """{"n": 12}""" update (n ! modify[String](_ + "test")) must throwA[RuntimeException]("spray.json.DeserializationException: Expected String as JsString, but got 12")
+          """{"n": 12}""" update (n ! modify[String](_ + "test")) must throwA[RuntimeException](
+            "spray.json.DeserializationException: Expected String as JsString, but got 12"
+          )
         }
         "missing" in {
           """{"n": 12}""" update (field("z") ! modify[Int](_ + 1)) must throwAn[Exception]("""Expected field 'z' in '{"n":12}'""")
@@ -170,7 +183,7 @@ class JsonLensesSpec extends Specification with SpecHelpers {
           """[{"b": 4}, {"c": 5}]""".update((* / 'b.?) ! set(38)) must be_json("""[{"b": 38}, {"c": 5, "b": 38}]""")
         }
         "set or update with default" in {
-          """[{"b": 4}, {"c": 5}]""".update((* / 'b.?) ! setOrUpdateField(38)(1 +)) must be_json("""[{"b": 5}, {"c": 5, "b": 38}]""")
+          """[{"b": 4}, {"c": 5}]""".update((* / 'b.?) ! setOrUpdateField(38)(1 + _)) must be_json("""[{"b": 5}, {"c": 5, "b": 38}]""")
         }
 
         "create nested (current behavior)" in {
@@ -183,8 +196,7 @@ class JsonLensesSpec extends Specification with SpecHelpers {
           //
           // This test remains here as witness to the current behavior.
 
-          """[{"b": {}}, {"c": 5}]""".update((* / 'b.? / 'd.?) ! set(38)) must be_json(
-            """[{"b":{"d":38}},{"c":5}]""")
+          """[{"b": {}}, {"c": 5}]""".update((* / 'b.? / 'd.?) ! set(38)) must be_json("""[{"b":{"d":38}},{"c":5}]""")
         }
         "delete some" in {
           def f(i: Int): Option[Int] =
@@ -197,10 +209,10 @@ class JsonLensesSpec extends Specification with SpecHelpers {
       }
       "update field of member" in {
         "existing" in {
-          """{"n": {"b": 4}}""" update ("n" / "b" ! modify[Int](1 +)) must be_json("""{"n": {"b": 5}}""")
+          """{"n": {"b": 4}}""" update ("n" / "b" ! modify[Int](1 + _)) must be_json("""{"n": {"b": 5}}""")
         }
         "parent missing" in {
-          """{"x": {"b": 4}}""" update ("n" / "b" ! modify[Int](1 +)) must throwAn[Exception]("""Expected field 'n' in '{"x":{"b":4}}'""")
+          """{"x": {"b": 4}}""" update ("n" / "b" ! modify[Int](1 + _)) must throwAn[Exception]("""Expected field 'n' in '{"x":{"b":4}}'""")
         }
       }
       "set element of array" in {
@@ -224,16 +236,19 @@ class JsonLensesSpec extends Specification with SpecHelpers {
         "in a homogenuous array" in {
           "if found" in {
             """[12, 39, 2, 5, 8, 3]""" update (JsonLenses.find(JsonLenses.value.is[Int](_ < 4)) ! set("test")) must be_json(
-              """[12, 39, "test", 5, 8, 3]""")
+              """[12, 39, "test", 5, 8, 3]"""
+            )
           }
           "if not found" in {
             """[12, 39, 2, 5, 8, 3]""" update (JsonLenses.find(JsonLenses.value.is[Int](_ == 434)) ! set("test")) must be_json(
-              """[12, 39, 2, 5, 8, 3]""")
+              """[12, 39, 2, 5, 8, 3]"""
+            )
           }
         }
         "in an inhomogenuous array" in {
           """["a", "b", 2, 5, 8, 3]""" update (JsonLenses.find(JsonLenses.value.is[Int](_ < 4)) ! set("test")) must be_json(
-            """["a", "b", "test", 5, 8, 3]""")
+            """["a", "b", "test", 5, 8, 3]"""
+          )
         }
         "nested" in {
           val lens = JsonLenses.find("a".is[Int](_ == 12)) / "b" / "c" / JsonLenses.find(JsonLenses.value.is[Int](_ == 5))
@@ -252,4 +267,3 @@ class JsonLensesSpec extends Specification with SpecHelpers {
     }
   }
 }
-
